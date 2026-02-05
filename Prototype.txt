@@ -1,0 +1,170 @@
+#include <iostream>
+#include <vector>
+#include <string>
+#include <algorithm> 
+#include <map>
+
+using namespace std;
+
+// --- 1. Trie Data Structure Implementation ---
+
+struct TrieNode {
+    map<char, TrieNode*> children;
+    bool isEndOfWord;
+
+    TrieNode() {
+        isEndOfWord = false;
+    }
+};
+
+class Trie {
+public:
+    TrieNode* root;
+
+    Trie() {
+        root = new TrieNode();
+    }
+
+    // Insert a word into the Trie
+    void insert(string word) {
+        TrieNode* current = root;
+        // FIX: Replaced range-based for loop with standard index loop
+        for (size_t i = 0; i < word.length(); i++) {
+            char ch = word[i];
+            if (current->children.find(ch) == current->children.end()) {
+                current->children[ch] = new TrieNode();
+            }
+            current = current->children[ch];
+        }
+        current->isEndOfWord = true;
+    }
+
+    bool search(string word) {
+        TrieNode* current = root;
+        // FIX: Replaced range-based for loop
+        for (size_t i = 0; i < word.length(); i++) {
+            char ch = word[i];
+            if (current->children.find(ch) == current->children.end()) {
+                return false;
+            }
+            current = current->children[ch];
+        }
+        return current->isEndOfWord;
+    }
+
+    void getWordsDFS(TrieNode* node, string prefix, vector<string>& wordList) {
+        if (node->isEndOfWord) {
+            wordList.push_back(prefix);
+        }
+        // FIX: Replaced structured binding loop with iterator loop
+        for (map<char, TrieNode*>::iterator it = node->children.begin(); it != node->children.end(); ++it) {
+            getWordsDFS(it->second, prefix + it->first, wordList);
+        }
+    }
+
+    vector<string> getAllWords() {
+        vector<string> wordList;
+        getWordsDFS(root, "", wordList);
+        return wordList;
+    }
+};
+
+// --- 2. Edit Distance Algorithm ---
+
+int calculateEditDistance(string str1, string str2) {
+    int m = str1.length();
+    int n = str2.length();
+
+    // FIX: Added space between >> to fix nested template error
+    vector<vector<int> > dp(m + 1, vector<int>(n + 1));
+
+    for (int i = 0; i <= m; i++) {
+        for (int j = 0; j <= n; j++) {
+            if (i == 0)
+                dp[i][j] = j;
+            else if (j == 0)
+                dp[i][j] = i;
+            else if (str1[i - 1] == str2[j - 1])
+                dp[i][j] = dp[i - 1][j - 1];
+            else
+                // FIX: Replaced min({}) with nested min() calls
+                dp[i][j] = 1 + min(dp[i][j - 1], min(dp[i - 1][j], dp[i - 1][j - 1]));
+        }
+    }
+    return dp[m][n];
+}
+
+// --- 3. Main Logic ---
+
+int main() {
+    Trie dictionary;
+    
+    // FIX: Replaced initializer list with manual push_back or array-based init
+    // C++98 doesn't support vector v = {"a", "b"};
+    const char* rawWords[] = {
+        "apple", "apply", "ape", "april", "banana", "band", "bandana",
+        "cat", "cattle", "car", "cart", "dog", "dodge", "elephant",
+        "hello", "hell", "help", "world", "word", "work"
+    };
+    
+    // Calculate size of array
+    int arraySize = sizeof(rawWords) / sizeof(rawWords[0]);
+    
+    // Fill vector manually
+    vector<string> initialWords;
+    for(int i = 0; i < arraySize; i++) {
+        initialWords.push_back(rawWords[i]);
+    }
+
+    cout << "Loading Dictionary..." << endl;
+    // FIX: Replaced range-based loop
+    for (size_t i = 0; i < initialWords.size(); i++) {
+        dictionary.insert(initialWords[i]);
+    }
+    cout << "Dictionary Loaded (" << initialWords.size() << " words)." << endl;
+    cout << "--------------------------------------------" << endl;
+
+    string input;
+    while (true) {
+        cout << "\nEnter a word to check (or type 'exit' to quit): ";
+        cin >> input;
+
+        if (input == "exit") break;
+
+        transform(input.begin(), input.end(), input.begin(), ::tolower);
+
+        if (dictionary.search(input)) {
+            cout << ">> Result: Correct spelling!" << endl;
+        } else {
+            cout << ">> Result: Misspelled word." << endl;
+            cout << ">> Auto-Suggesting similar words..." << endl;
+
+            vector<string> allWords = dictionary.getAllWords();
+            vector<pair<int, string> > suggestions; // Note space in > >
+
+            // FIX: Replaced range-based loop
+            for (size_t i = 0; i < allWords.size(); i++) {
+                int dist = calculateEditDistance(input, allWords[i]);
+                if (dist <= 2) {
+                    // FIX: Replaced {dist, word} with make_pair
+                    suggestions.push_back(make_pair(dist, allWords[i]));
+                }
+            }
+
+            sort(suggestions.begin(), suggestions.end());
+
+            if (suggestions.empty()) {
+                cout << "   No similar words found." << endl;
+            } else {
+                cout << "   Did you mean: ";
+                // FIX: Replaced range-based loop
+                for (size_t i = 0; i < suggestions.size(); i++) {
+                    cout << suggestions[i].second << " ";
+                }
+                cout << endl;
+            }
+        }
+    }
+
+    return 0;
+}
